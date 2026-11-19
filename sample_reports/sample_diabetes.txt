@@ -1,0 +1,25 @@
+===============================================================
+                    LAL PATHOLOGICAL SERVICES
+               Automated Clinical Chemistry Division
+                  Connaught Place, New Delhi, India
+===============================================================
+Patient Name   : Ramesh Chand Gupta       Age / Gender : 54 Y / Male
+Referral Doctor: Dr. Rajiv Mehra, MD      Date         : 18-Nov-2026
+Sample ID      : LP-994321                 Report Status: Final
+Test Name      : Diabetic Evaluation Profile
+===============================================================
+INVESTIGATION                     RESULT    UNITS      REFERENCE RANGE
+---------------------------------------------------------------
+Fasting Blood Glucose (FBS)       158.0     mg/dL      70.0 - 99.0
+Post Prandial Glucose (PPBS)      245.0     mg/dL      < 140.0
+HbA1c (Glycated Hemoglobin)       8.4       %          4.0 - 5.6
+Estimated Average Glucose (eAG)   194.0     mg/dL      70.0 - 126.0
+Urine Glucose (Fasting)           Positive  mg/dL      Negative
+---------------------------------------------------------------
+HbA1c Diagnostic Criteria (ADA Guidelines):
+Normal              : < 5.7 %
+Prediabetes         : 5.7 - 6.4 %
+Diabetic            : >= 6.5 %
+Action Suggested: Poor glycemic control. Diet modification, endocrinology consultation advised.
+===============================================================
+                     *** End of Report ***

@@ -1,0 +1,24 @@
+===============================================================
+                     THYROCARE DIAGNOSTICS
+               Endocrinology & Hormone Analysis
+                 Powai, Mumbai, Maharashtra
+===============================================================
+Patient Name   : Priya Nair               Age / Gender : 32 Y / Female
+Referral Doctor: Dr. K. Ramanathan, MD    Date         : 15-Nov-2026
+Sample ID      : TC-332918                 Report Status: Final
+Test Name      : Complete Thyroid Panel (T3, T4, TSH)
+===============================================================
+INVESTIGATION                     RESULT    UNITS      REFERENCE RANGE
+---------------------------------------------------------------
+Triiodothyronine (Total T3)       65.0      ng/dL      80.0 - 200.0
+Thyroxine (Total T4)              4.1       ug/dL      5.0 - 12.0
+Thyroid Stimulating Hormone (TSH) 9.80      uIU/mL     0.45 - 4.50
+Free T3                           2.1       pg/mL      2.3 - 4.2
+Free T4                           0.7       ng/dL      0.8 - 1.8
+---------------------------------------------------------------
+Clinical Interpretation:
+Significantly elevated TSH with subnormal T3 and T4 levels consistent with Primary Hypothyroidism.
+Symptoms may include fatigue, weight gain, cold intolerance, and sluggishness.
+Endocrinologist consultation recommended for dosage titration.
+===============================================================
+                     *** End of Report ***

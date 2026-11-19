@@ -1,0 +1,26 @@
+===============================================================
+                     APOLLO CLINICAL DIAGNOSTICS
+               Accredited by NABL & CAP Certified
+                 MG Road, Bengaluru, Karnataka
+===============================================================
+Patient Name   : Sunita Verma             Age / Gender : 48 Y / Female
+Referral Doctor: Dr. Ananya Sen, MD (Card) Date        : 17-Nov-2026
+Sample ID      : AP-542109                 Report Status: Final
+Test Name      : Comprehensive Lipid Profile (Serum)
+===============================================================
+INVESTIGATION                     RESULT    UNITS      REFERENCE RANGE
+---------------------------------------------------------------
+Total Cholesterol                 245.0     mg/dL      < 200.0 (Desirable)
+Triglycerides                     220.0     mg/dL      < 150.0 (Normal)
+HDL Cholesterol (Good)            38.0      mg/dL      40.0 - 60.0 (Optimal)
+LDL Cholesterol (Bad)             163.0     mg/dL      < 100.0 (Optimal)
+VLDL Cholesterol                  44.0      mg/dL      5.0 - 30.0
+Cholesterol / HDL Ratio           6.45      Ratio      3.3 - 4.4
+LDL / HDL Ratio                   4.29      Ratio      0.5 - 3.0
+Non-HDL Cholesterol               207.0     mg/dL      < 130.0
+---------------------------------------------------------------
+Risk Stratification:
+Moderately high cardiovascular risk. High atherogenic profile.
+Recommendation: Low fat, low glycemic diet, exercise, and lipid lowering evaluation.
+===============================================================
+                     *** End of Report ***

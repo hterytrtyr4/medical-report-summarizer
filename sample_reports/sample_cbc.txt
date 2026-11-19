@@ -1,0 +1,31 @@
+===============================================================
+                     METROPATH DIAGNOSTIC LABS
+               Accredited by NABL & ISO 9001:2015
+                 124 Health Avenue, New Delhi, India
+===============================================================
+Patient Name   : Rajesh Kumar             Age / Gender : 42 Y / Male
+Referral Doctor: Dr. S. K. Sharma, MD     Date         : 18-Nov-2026
+Sample ID      : MP-892341                 Report Status: Final
+Test Name      : Complete Blood Count (CBC) with ESR
+===============================================================
+INVESTIGATION                     RESULT    UNITS      REFERENCE RANGE
+---------------------------------------------------------------
+Hemoglobin (Hb)                   10.2      g/dL       13.0 - 17.0
+Total Leukocyte Count (WBC)       12500     /cumm      4000 - 11000
+Red Blood Cell (RBC) Count        4.1       mil/cumm   4.5 - 5.9
+Packed Cell Volume (PCV / HCT)    32.0      %          40.0 - 50.0
+Mean Corpuscular Volume (MCV)     78.0      fL         82.0 - 98.0
+Mean Corpuscular Hb (MCH)         24.8      pg         27.0 - 32.0
+MCHC                              31.8      g/dL       32.0 - 36.0
+Platelet Count                    240000    /cumm      150000 - 450000
+Erythrocyte Sedimentation (ESR)   28        mm/hr      0 - 15
+Neutrophils                       72        %          40 - 70
+Lymphocytes                       22        %          20 - 40
+Monocytes                         4         %          2 - 8
+Eosinophils                       2         %          1 - 6
+---------------------------------------------------------------
+Impression:
+Microcytic hypochromic mild anemia with leukocytosis and elevated ESR.
+Clinical correlation and iron profile study recommended.
+===============================================================
+                     *** End of Report ***
