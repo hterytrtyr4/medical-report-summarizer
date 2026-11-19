@@ -6,7 +6,7 @@ import os
 import io
 import re
 from typing import Tuple, Optional
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 # PDF libraries
 try:
@@ -82,11 +82,14 @@ def preprocess_image(image: Image.Image) -> Image.Image:
     Prepares medical report image for optimal OCR extraction:
     Converts to grayscale, boosts contrast, and sharpens text lines.
     """
-    gray = image.convert("L")
-    enhancer = ImageEnhance.Contrast(gray)
-    high_contrast = enhancer.enhance(1.8)
-    sharpened = high_contrast.filter(ImageFilter.SHARPEN)
-    return sharpened
+    gray = ImageOps.exif_transpose(image).convert("L")
+    # Upscale small phone photos so character shapes survive OCR.
+    if max(gray.size) < 2200:
+        scale = min(2.5, 2200 / max(gray.size))
+        gray = gray.resize((int(gray.width * scale), int(gray.height * scale)), Image.Resampling.LANCZOS)
+    gray = ImageOps.autocontrast(gray)
+    enhanced = ImageEnhance.Contrast(gray).enhance(1.7)
+    return enhanced.filter(ImageFilter.UnsharpMask(radius=1.5, percent=140, threshold=3))
 
 
 def extract_text_from_image(image_bytes: bytes, custom_tesseract_path: Optional[str] = None) -> Tuple[str, Optional[str]]:
@@ -103,10 +106,19 @@ def extract_text_from_image(image_bytes: bytes, custom_tesseract_path: Optional[
         image = Image.open(io.BytesIO(image_bytes))
         processed = preprocess_image(image)
 
-        try:
-            text = pytesseract.image_to_string(processed, config='--oem 3 --psm 6')
-        except Exception:
-            text = pytesseract.image_to_string(processed)
+        # Different layouts work better with different page segmentation modes.
+        # Pick the longest non-empty extraction; do not concatenate variants (duplicates).
+        candidates = []
+        for psm in (6, 11, 4):
+            try:
+                candidate = pytesseract.image_to_string(
+                    processed, lang="eng", config=f"--oem 3 --psm {psm}"
+                ).strip()
+                if candidate:
+                    candidates.append(candidate)
+            except Exception:
+                continue
+        text = max(candidates, key=len) if candidates else ""
 
         clean_text = text.strip()
         if not clean_text:

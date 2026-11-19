@@ -13,6 +13,17 @@ from pdf_generator import generate_summary_pdf
 
 SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "sample_reports")
 
+def test_empty_extraction_is_not_normal():
+    print("Testing empty extraction safety...")
+    from summarizer import calculate_health_score
+    score = calculate_health_score([])
+    assert score["score"] is None
+    assert "Insufficient data" in score["status"]
+    summary = generate_rule_based_summary({}, [])
+    assert "No laboratory values" in summary["en_highlights"][0]
+    assert not any("within normal" in item.lower() for item in summary["en_highlights"])
+    print("✅ Empty extraction is not reported as healthy.\n")
+
 def test_cbc_sample():
     print("Testing CBC sample text...")
     cbc_path = os.path.join(SAMPLES_DIR, "sample_cbc.txt")
@@ -88,6 +99,7 @@ def test_language_prompts_and_qa():
 
 
 if __name__ == "__main__":
+    test_empty_extraction_is_not_normal()
     test_language_prompts_and_qa()
     test_cbc_sample()
     test_pdf_extraction()

@@ -418,7 +418,7 @@ if st.session_state.report_text:
         st.markdown(f"""
         <div class="metric-card">
             <div style="font-size: 0.85rem; color: #64748b;">{ui['kpi_score']}</div>
-            <div class="score-badge" style="color: {health_score.get('color', '#0d3b66')};">{health_score.get('score', 85)}<span style="font-size: 1.1rem; color: #94a3b8;">/100</span></div>
+            <div class="score-badge" style="color: {health_score.get('color', '#0d3b66')};">{health_score.get('score') if health_score.get('score') is not None else 'N/A'}{ '<span style="font-size: 1.1rem; color: #94a3b8;">/100</span>' if health_score.get('score') is not None else ''}</div>
             <div style="font-size: 0.8rem; color: #475569; margin-top: 4px;">{health_score.get('status', 'Stable')}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -478,7 +478,9 @@ if st.session_state.report_text:
         with col_s1:
             st.markdown(f"#### {ui['alerts_h']}")
             abnormals = [p for p in params if p["status"] != "Normal"]
-            if abnormals:
+            if not params:
+                st.warning("No test values were detected. No health status can be inferred. Check the Raw OCR Text below or upload a clearer, well-lit report image / searchable PDF.")
+            elif abnormals:
                 for ab in abnormals:
                     is_high = ab["status"] == "High"
                     badge = '<span class="badge-high">HIGH</span>' if is_high else '<span class="badge-low">LOW</span>'
@@ -495,7 +497,7 @@ if st.session_state.report_text:
                         <br><span style="font-size: 0.85rem; color: #334155;"><b>{ui['impact']}:</b> {impact}</span>
                     </div>
                     """, unsafe_allow_html=True)
-            else:
+            elif params:
                 st.success(ui["all_ok"])
 
             organ_en = summary.get("organ_insights_en", [])

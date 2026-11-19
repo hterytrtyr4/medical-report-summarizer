@@ -19,7 +19,15 @@ def calculate_health_score(parameters: List[Dict[str, Any]]) -> Dict[str, Any]:
     Calculates an aggregate health indicator score out of 100 based on test results.
     """
     if not parameters:
-        return {"score": 100, "status": "No Tests Detected", "color": "#7f8c8d"}
+        # Missing extraction is not evidence of normal health. Never award a score.
+        return {
+            "score": None,
+            "status": "Insufficient data — no laboratory values were detected",
+            "color": "#7f8c8d",
+            "normal_count": 0,
+            "abnormal_count": 0,
+            "total_count": 0,
+        }
 
     total = len(parameters)
     normal_count = sum(1 for p in parameters if p["status"] == "Normal")
@@ -56,6 +64,19 @@ def generate_rule_based_summary(patient_info: Dict[str, str], parameters: List[D
     high_items = [p for p in parameters if p["status"] == "High"]
     low_items = [p for p in parameters if p["status"] == "Low"]
     normal_items = [p for p in parameters if p["status"] == "Normal"]
+
+    # Do not imply normal findings when OCR/parser found no usable values.
+    if not parameters:
+        return {
+            "engine": "Clinical Rule-Based Engine",
+            "en_highlights": ["No laboratory values could be identified. Please check the extracted text or upload a clearer report."],
+            "hi_highlights": ["कोई लैब वैल्यू नहीं पहचानी जा सकी। कृपया निकाले गए टेक्स्ट की जाँच करें या साफ रिपोर्ट अपलोड करें।"],
+            "organ_insights_en": [],
+            "organ_insights_hi": [],
+            "doctor_questions": [],
+            "doctor_questions_hi": [],
+            "health_score": calculate_health_score(parameters),
+        }
 
     # English Summary Highlights
     en_highlights = []
