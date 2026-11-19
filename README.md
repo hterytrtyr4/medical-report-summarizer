@@ -160,3 +160,15 @@ Deploying takes under 3 minutes:
 ## 👨‍🎓 Project Credits
 - **Author:** B.Tech (AI/ML) 5th Semester Student
 - **Technologies:** Streamlit · Python · PyMuPDF · Tesseract OCR · Google Gemini · Plotly · ReportLab
+
+
+## Gemini key on Streamlit Cloud
+App settings → Secrets, add:
+
+```toml
+GEMINI_API_KEY = "your_key"
+```
+
+The app reads it automatically (or paste a key in the sidebar). With a key, the summary and the
+"Ask about your report" tab are generated live by Gemini in the language chosen in the sidebar.
+Without a key the offline rule engine is used.

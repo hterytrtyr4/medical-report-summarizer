@@ -67,7 +67,28 @@ def test_pdf_extraction():
 
     print("✅ All PDF extraction tests passed successfully!\n")
 
+def test_language_prompts_and_qa():
+    print("Testing language-aware prompts and offline Q&A...")
+    from summarizer import build_summary_prompt, answer_question_offline, generate_llm_summary
+    with open(os.path.join(SAMPLES_DIR, "sample_cbc.txt"), "r", encoding="utf-8") as f:
+        text = f.read()
+    info, params = extract_patient_info(text), extract_parameters(text)
+
+    p_hi = build_summary_prompt(text, params, info, "hindi")
+    p_en = build_summary_prompt(text, params, info, "english")
+    assert p_hi != p_en and "ONLY in simple, everyday Hindi" in p_hi and "Do not use Hindi" in p_en
+
+    a_hi = answer_question_offline("what is hemoglobin?", params, "hindi")
+    a_en = answer_question_offline("what is hemoglobin?", params, "english")
+    assert a_hi != a_en and "Hemoglobin" in a_en
+
+    res = generate_llm_summary(text, params, info, api_key=None, language="english")
+    assert res["llm_note"] == "no_key"
+    print("✅ Language & Q&A tests passed!\n")
+
+
 if __name__ == "__main__":
+    test_language_prompts_and_qa()
     test_cbc_sample()
     test_pdf_extraction()
     print("🎉 FULL PIPELINE TEST PASSED 100%!")

@@ -4,7 +4,7 @@ Generates patient-friendly explanations in Hindi, English, and Hinglish.
 Integrates Google Gemini LLM with robust deterministic fallback.
 """
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 try:
     from google import genai
@@ -136,83 +136,232 @@ def generate_rule_based_summary(patient_info: Dict[str, str], parameters: List[D
     }
 
 
+LANG_MODES = ("bilingual", "hindi", "english")
+
+LANG_INSTRUCTIONS = {
+    "bilingual": (
+        "Write every section twice: first in simple everyday Hindi (Devanagari script), "
+        "then in plain English. Keep test names and units in English."
+    ),
+    "hindi": (
+        "Write the ENTIRE response ONLY in simple, everyday Hindi (Devanagari script). "
+        "Do not write English sentences. Test names and units may stay in English."
+    ),
+    "english": (
+        "Write the ENTIRE response ONLY in plain, simple English. Do not use Hindi."
+    ),
+}
+
+SECTION_HEADINGS = {
+    "bilingual": [
+        "### 1. मुख्य निष्कर्ष / Key Takeaways",
+        "### 2. सभी नतीजों का मतलब / What the results mean together",
+        "### 3. खान-पान और दिनचर्या / Diet & Lifestyle",
+        "### 4. डॉक्टर से क्या पूछें / Questions for your doctor",
+    ],
+    "hindi": [
+        "### 1. मुख्य निष्कर्ष",
+        "### 2. सभी नतीजों का मतलब",
+        "### 3. खान-पान और दिनचर्या में सुधार",
+        "### 4. डॉक्टर से क्या पूछें",
+    ],
+    "english": [
+        "### 1. Key Takeaways",
+        "### 2. What the Results Mean Together",
+        "### 3. Diet & Lifestyle Guidance",
+        "### 4. Questions to Ask Your Doctor",
+    ],
+}
+
+# Models are tried in order; override the first with the GEMINI_MODEL env var / secret.
+DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+
+
+def _model_candidates() -> List[str]:
+    custom = os.getenv("GEMINI_MODEL")
+    models = ([custom] if custom else []) + DEFAULT_MODELS
+    seen, out = set(), []
+    for m in models:
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+def _call_gemini(prompt: str, api_key: str, temperature: float = 0.6) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Calls Gemini, trying each candidate model. Returns (text, model_used, error).
+    """
+    if not GEMINI_AVAILABLE:
+        return None, None, "google-genai package is not installed."
+    last_err = None
+    client = genai.Client(api_key=api_key)
+    for model in _model_candidates():
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=temperature),
+            )
+            text = (response.text or "").strip()
+            if text:
+                return text, model, None
+            last_err = f"{model} returned an empty response."
+        except Exception as e:  # bad key, quota, model not found, offline...
+            last_err = f"{model}: {str(e)[:200]}"
+    return None, None, last_err
+
+
+def _findings_text(parameters: List[Dict[str, Any]]) -> str:
+    lines = [
+        f"- {p['name']}: {p['value']} {p['unit']} "
+        f"(Reference: {p['min_ref']} - {p['max_ref']} {p['unit']}) -> {p['status']}"
+        for p in parameters
+    ]
+    return "\n".join(lines) if lines else "No numeric parameters were parsed automatically."
+
+
+def build_summary_prompt(
+    raw_text: str,
+    parameters: List[Dict[str, Any]],
+    patient_info: Dict[str, str],
+    language: str = "bilingual",
+) -> str:
+    """Builds the Gemini prompt. The output language is controlled by `language`."""
+    language = language if language in LANG_MODES else "bilingual"
+    headings = "\n".join(SECTION_HEADINGS[language])
+    return f"""You are a compassionate medical communicator explaining a laboratory report to a patient with no medical background.
+
+LANGUAGE RULE (very important): {LANG_INSTRUCTIONS[language]}
+
+PATIENT:
+Name: {patient_info.get('name', 'Patient')}
+Age / Gender: {patient_info.get('age_gender', 'Not specified')}
+Report date: {patient_info.get('date', 'Recent')}
+
+EXTRACTED PARAMETERS:
+{_findings_text(parameters)}
+
+RAW REPORT TEXT (for extra context):
+{raw_text[:3000]}
+
+Write clean Markdown using exactly these four sections:
+{headings}
+
+Rules:
+- Base everything on the numbers above; mention specific test names and values.
+- Be calm and reassuring, never alarming. Say whether follow-up is routine or should be prompt.
+- Section 3 must give 3-4 practical diet/lifestyle tips tailored to the abnormal values.
+- Section 4 must give exactly 3 questions to ask the doctor.
+- Do not diagnose, and do not suggest medicine names or doses.
+- End with one short line saying this is educational and not a substitute for a doctor.
+"""
+
+
 def generate_llm_summary(
     raw_text: str,
     parameters: List[Dict[str, Any]],
     patient_info: Dict[str, str],
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    language: str = "bilingual",
 ) -> Dict[str, Any]:
     """
-    Generates an advanced bilingual summary using Google Gemini (via google-genai SDK).
-    Falls back gracefully to the rule-based engine if the API key is absent or invalid.
+    Generates a personalised summary with Google Gemini in the requested language.
+    Falls back to the rule-based engine (with a visible note explaining why).
     """
     key_to_use = api_key or os.getenv("GEMINI_API_KEY")
-    
-    # If no LLM available or key not configured, use rule-based fallback
-    if not GEMINI_AVAILABLE or not key_to_use:
-        res = generate_rule_based_summary(patient_info, parameters)
-        res["llm_note"] = "Rule-based synthesis active. (Enter a Gemini API Key in the sidebar for personalized LLM reasoning)."
-        return res
+    base_res = generate_rule_based_summary(patient_info, parameters)
 
-    # Construct prompt with clinical findings
-    findings_summary = []
-    for p in parameters:
-        findings_summary.append(
-            f"- {p['name']}: {p['value']} {p['unit']} (Standard Range: {p['min_ref']} - {p['max_ref']} {p['unit']}) -> Status: {p['status']}"
-        )
-    findings_text = "\n".join(findings_summary) if findings_summary else "No exact numerical parameters parsed automatically."
-
-    prompt = f"""
-You are an expert, compassionate bilingual medical communicator and clinical educator.
-Your task is to analyze the following laboratory diagnostic report and explain it in extremely simple, empathetic terms for a non-medical patient and their family.
-
-PATIENT METADATA:
-Name: {patient_info.get('name', 'Patient')}
-Age / Gender: {patient_info.get('age_gender', 'Not Specified')}
-Report Date: {patient_info.get('date', 'Recent')}
-
-EXTRACTED PARAMETERS:
-{findings_text}
-
-RAW TEXT SNIPPET:
-{raw_text[:1200]}
-
-Please provide your response in cleanly formatted Markdown with the following specific sections:
-
-### 1. 🇮🇳 सरल हिंदी में मुख्य निष्कर्ष (Key Takeaways in Simple Hindi)
-- समझाएं कि रिपोर्ट में क्या सामान्य है और क्या चिंताजनक (High / Low).
-- बिना डराए, सहज और रोजमर्रा की हिंदी में मरीज को उनकी सेहत का हाल बताएं।
-
-### 2. 🇬🇧 Clinical Overview in Plain English
-- High-level clinical synthesis of what these results mean together (e.g. anemia, metabolic risk, inflammation, renal strain).
-- Categorize urgency: Routine review / Prompt doctor consultation.
-
-### 3. 🥗 खान-पान और दिनचर्या में क्या सुधार करें? (Diet & Lifestyle Guidance)
-- 3-4 practical dietary dos and don'ts in Hindi & English tailored specifically to these test numbers.
-
-### 4. 🩺 डॉक्टर से परामर्श लेते समय क्या पूछें? (Questions for Doctor)
-- 3 crucial questions the patient should ask their consulting doctor.
-
-### ⚠️ Medical Disclaimer
-- Clear standard disclaimer that this AI summary is for educational empowerment and not a substitute for clinical diagnosis or prescription.
-"""
-
-    try:
-        client = genai.Client(api_key=key_to_use)
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        llm_text = response.text
-
-        base_res = generate_rule_based_summary(patient_info, parameters)
-        base_res["engine"] = "Google Gemini 2.5 Flash + Clinical Engine"
-        base_res["ai_narrative"] = llm_text
+    if not key_to_use:
+        base_res["llm_note"] = "no_key"
         return base_res
 
-    except Exception as e:
-        # Graceful fallback on quota error, bad key, or offline
-        fallback_res = generate_rule_based_summary(patient_info, parameters)
-        fallback_res["engine"] = "Clinical Rule-Based Engine (LLM Fallback)"
-        fallback_res["llm_note"] = f"LLM temporarily unavailable ({str(e)[:80]}...). Using trusted clinical rule engine."
-        return fallback_res
+    prompt = build_summary_prompt(raw_text, parameters, patient_info, language)
+    text, model, err = _call_gemini(prompt, key_to_use)
+    if text:
+        base_res["engine"] = f"Google {model} + Clinical Engine"
+        base_res["ai_narrative"] = text
+        base_res["language"] = language
+    else:
+        base_res["engine"] = "Clinical Rule-Based Engine (LLM Fallback)"
+        base_res["llm_note"] = f"error: {err}"
+    return base_res
+
+
+# ------------------------------------------------------------------
+# Question answering ("Ask about your report")
+# ------------------------------------------------------------------
+def answer_question_llm(
+    question: str,
+    history: List[Dict[str, str]],
+    parameters: List[Dict[str, Any]],
+    patient_info: Dict[str, str],
+    raw_text: str,
+    api_key: str,
+    language: str = "bilingual",
+) -> Tuple[Optional[str], Optional[str]]:
+    """Answers a free-form question about the loaded report. Returns (answer, error)."""
+    language = language if language in LANG_MODES else "bilingual"
+    convo = "\n".join(
+        f"{'Patient' if m['role'] == 'user' else 'Assistant'}: {m['content']}" for m in history[-6:]
+    )
+    prompt = f"""You are a careful, friendly assistant helping a patient understand their lab report.
+
+LANGUAGE RULE: {LANG_INSTRUCTIONS[language]}
+If the patient writes in Hindi or Hinglish, reply in simple Hindi even in English mode only if they clearly wrote in Hindi.
+
+PATIENT: {patient_info.get('name', 'Patient')} ({patient_info.get('age_gender', 'n/a')})
+
+LAB RESULTS:
+{_findings_text(parameters)}
+
+RAW REPORT TEXT:
+{raw_text[:2500]}
+
+CONVERSATION SO FAR:
+{convo or '(none)'}
+
+PATIENT QUESTION: {question}
+
+Answer using only the report above. Keep it short (under 150 words), simple and calm.
+If the question is not answerable from the report, say so and suggest asking the doctor.
+Never diagnose or recommend medicines or doses. Mention seeing a doctor for anything serious.
+"""
+    text, _model, err = _call_gemini(prompt, api_key, temperature=0.4)
+    return text, err
+
+
+def answer_question_offline(
+    question: str,
+    parameters: List[Dict[str, Any]],
+    language: str = "bilingual",
+) -> str:
+    """Keyword-based answer used when no Gemini key is available."""
+    q = question.lower()
+    hits = []
+    for p in parameters:
+        tokens = {p["key"].lower(), p["name"].lower()}
+        tokens.update(t.strip("()") for t in p["name"].lower().split())
+        if any(len(t) > 2 and t in q for t in tokens):
+            hits.append(p)
+
+    use_hi = language in ("hindi", "bilingual")
+    use_en = language in ("english", "bilingual")
+
+    if not hits:
+        msgs = []
+        if use_en:
+            msgs.append("I couldn't match your question to a test in this report. Try naming a test (e.g. 'What is hemoglobin?'), or add a Gemini API key in the sidebar to ask anything.")
+        if use_hi:
+            msgs.append("आपका सवाल रिपोर्ट के किसी टेस्ट से मेल नहीं खाया। किसी टेस्ट का नाम लिखकर पूछें (जैसे 'हीमोग्लोबिन क्या है?'), या साइडबार में Gemini API Key डालकर कुछ भी पूछें।")
+        return "\n\n".join(msgs)
+
+    parts = []
+    for p in hits[:3]:
+        if use_en:
+            detail = {"High": p["high_en"], "Low": p["low_en"]}.get(p["status"], "This value is within the normal range.")
+            parts.append(f"**{p['name']}** = {p['value']} {p['unit']} ({p['status']}; normal {p['min_ref']}-{p['max_ref']}).  \n{p['meaning_en']} {detail}")
+        if use_hi:
+            detail = {"High": p["high_hi"], "Low": p["low_hi"]}.get(p["status"], "यह वैल्यू सामान्य सीमा में है।")
+            parts.append(f"**{p['name']}** = {p['value']} {p['unit']} ({p['status_hi']}).  \n{p['meaning_hi']} {detail}")
+    return "\n\n".join(parts)
